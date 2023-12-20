@@ -1,45 +1,102 @@
-from flask import Flask, request, redirect
-from flask_restful import Resource, Api
-from flask_cors import CORS
-import os
-import prediction
+# Dependencies
+from flask import Flask, request, jsonify
+from sklearn.externals import joblib
+import traceback
+import pandas as pd
+import numpy as np
 
+# Your API definition
 app = Flask(__name__)
-cors = CORS(app, resources={r"*": {"origins": "*"}})
-api = Api(app)
 
-class Test(Resource):
-    def get(self):
-        return 'Welcome to, Test App API!'
+#get all weight classes
+ufc_fights = pd.read_csv('csv_data/ufc_fight_data.csv')
+weight_classes = ufc_fights.weight_class.unique().tolist()
+weight_classes = weight_classes[:-1]
 
-    def post(self):
+@app.route('/weight-classes', methods=['GET'])
+def get_weight_classes():
+    return jsonify(weight_classes)
+
+@app.route('/add_to_list', methods=['POST'])
+def add_to_list():
+    if request.method == 'POST':
+        data = request.get_json()  # Get the JSON data from the POST request
+        if 'item' in data:
+            weight_class = data['weight-class']
+            my_list.append(item)  # Append the received string to the list
+            return jsonify({'message': 'Item added to the list', 'updated_list': my_list}), 201
+        else:
+            return jsonify({'error': 'No weight-class provided in the request'}), 400
+
+@app.route('/weight-classes', methods=['GET'])
+def predict():
+    if lr:
         try:
-            value = request.get_json()
-            if(value):
-                return {'Post Values': value}, 201
+            json_ = request.json
+            print(json_)
+            query = pd.get_dummies(pd.DataFrame(json_))
+            query = query.reindex(columns=model_columns, fill_value=0)
 
-            return {"error":"Invalid format."}
+            prediction = list(lr.predict(query))
 
-        except Exception as error:
-            return {'error': error}
+            return jsonify({'prediction': str(prediction)})
 
-class GetPredictionOutput(Resource):
-    def get(self):
-        return {"error":"Invalid Method."}
+        except:
 
-    def post(self):
+            return jsonify({'trace': traceback.format_exc()})
+    else:
+        print ('Train the model first')
+        return ('No model here to use')
+    
+@app.route('/{weight-classes}/fighters', methods=['GET'])
+def predict():
+    if lr:
         try:
-            data = request.get_json()
-            predict = prediction.predict_mpg(data)
-            predictOutput = predict
-            return {'predict':predictOutput}
+            json_ = request.json
+            print(json_)
+            query = pd.get_dummies(pd.DataFrame(json_))
+            query = query.reindex(columns=model_columns, fill_value=0)
 
-        except Exception as error:
-            return {'error': error}
+            prediction = list(lr.predict(query))
 
-api.add_resource(Test,'/')
-api.add_resource(GetPredictionOutput,'/getPredictionOutput')
+            return jsonify({'prediction': str(prediction)})
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+        except:
+
+            return jsonify({'trace': traceback.format_exc()})
+    else:
+        print ('Train the model first')
+        return ('No model here to use')
+    
+@app.route('/predict', methods=['POST'])
+def predict():
+    if lr:
+        try:
+            json_ = request.json
+            print(json_)
+            query = pd.get_dummies(pd.DataFrame(json_))
+            query = query.reindex(columns=model_columns, fill_value=0)
+
+            prediction = list(lr.predict(query))
+
+            return jsonify({'prediction': str(prediction)})
+
+        except:
+
+            return jsonify({'trace': traceback.format_exc()})
+    else:
+        print ('Train the model first')
+        return ('No model here to use')
+
+if __name__ == '__main__':
+    try:
+        port = int(sys.argv[1]) # This is for a command-line input
+    except:
+        port = 12345 # If you don't provide any port the port will be set to 12345
+
+    lr = joblib.load("model.pkl") # Load "model.pkl"
+    print ('Model loaded')
+    model_columns = joblib.load("model_columns.pkl") # Load "model_columns.pkl"
+    print ('Model columns loaded')
+
+    app.run(port=port, debug=True)

@@ -1,6 +1,6 @@
 # Dependencies
 from fastapi import FastAPI
-from Fighters import fighters_data
+from Fighters import fighters_data, fighters_weightclass
 from typing import List, Dict
 import traceback
 import pandas as pd
@@ -20,9 +20,6 @@ async def get_weight_classes():
     return {"weight_classes": weight_classes}
 
 #route to get weightclass list
-@app.get('/fighters/{weightclass}')
-async def get_fighters_by_weightclass(weightclass: str):
-    if weightclass >= 0 and weightclass < len(weight_classes):
-        return {"weight_class": weight_classes[weightclass]}
-    else:
-        return {"error": "Index out of range"}
+@app.get('/fighters/{weight}')
+async def get_fighters_by_weightclass(weight: str):
+    return {"fighters": fighters_weightclass(weight)}
